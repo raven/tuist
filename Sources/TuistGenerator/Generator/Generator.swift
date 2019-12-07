@@ -12,7 +12,7 @@ public protocol Generating {
     /// - Returns: An absolute path to the generated Xcode project many of which adopt `FatalError`
     /// - Throws: Errors encountered during the generation process
     /// - seealso: TuistCore.FatalError
-    func generateProject(at path: AbsolutePath) throws -> AbsolutePath
+    func generateProject(at path: AbsolutePath) throws -> (AbsolutePath, Graphing)
 
     /// Generates the given project in the same directory where it's defined.
     /// - Parameters:
@@ -32,7 +32,7 @@ public protocol Generating {
     ///           many of which adopt `FatalError`
     /// - seealso: TuistCore.FatalError
     @discardableResult
-    func generateProjectWorkspace(at path: AbsolutePath, workspaceFiles: [AbsolutePath]) throws -> AbsolutePath
+    func generateProjectWorkspace(at path: AbsolutePath, workspaceFiles: [AbsolutePath]) throws -> (AbsolutePath, Graphing)
 
     /// Generate an Xcode workspace at a given path. All referenced projects and their dependencies will be generated and included.
     ///
@@ -46,7 +46,7 @@ public protocol Generating {
     ///           many of which adopt `FatalError`
     /// - seealso: TuistCore.FatalError
     @discardableResult
-    func generateWorkspace(at path: AbsolutePath, workspaceFiles: [AbsolutePath]) throws -> AbsolutePath
+    func generateWorkspace(at path: AbsolutePath, workspaceFiles: [AbsolutePath]) throws -> (AbsolutePath, Graphing)
 }
 
 /// A default implementation of `Generating`
@@ -104,7 +104,7 @@ public class Generator: Generating {
         return generatedProject.path
     }
 
-    public func generateProject(at path: AbsolutePath) throws -> AbsolutePath {
+    public func generateProject(at path: AbsolutePath) throws -> (AbsolutePath, Graphing) {
         let tuistConfig = try graphLoader.loadTuistConfig(path: path)
         try environmentLinter.lint(config: tuistConfig)
 
@@ -114,11 +114,11 @@ public class Generator: Generating {
         let generatedProject = try projectGenerator.generate(project: project,
                                                              graph: graph,
                                                              sourceRootPath: path)
-        return generatedProject.path
+        return (generatedProject.path, graph)
     }
 
     public func generateProjectWorkspace(at path: AbsolutePath,
-                                         workspaceFiles: [AbsolutePath]) throws -> AbsolutePath {
+                                         workspaceFiles: [AbsolutePath]) throws -> (AbsolutePath, Graphing) {
         let tuistConfig = try graphLoader.loadTuistConfig(path: path)
         try environmentLinter.lint(config: tuistConfig)
 
@@ -130,14 +130,15 @@ public class Generator: Generating {
                                   projects: graph.projectPaths,
                                   additionalFiles: workspaceFiles.map(FileElement.file))
 
-        return try workspaceGenerator.generate(workspace: workspace,
-                                               path: path,
-                                               graph: graph,
-                                               tuistConfig: tuistConfig)
+        let workspacePath = try workspaceGenerator.generate(workspace: workspace,
+                                                            path: path,
+                                                            graph: graph,
+                                                            tuistConfig: tuistConfig)
+        return (workspacePath, graph)
     }
 
     public func generateWorkspace(at path: AbsolutePath,
-                                  workspaceFiles: [AbsolutePath]) throws -> AbsolutePath {
+                                  workspaceFiles: [AbsolutePath]) throws -> (AbsolutePath, Graphing) {
         let tuistConfig = try graphLoader.loadTuistConfig(path: path)
         try environmentLinter.lint(config: tuistConfig)
         let (graph, workspace) = try graphLoader.loadWorkspace(path: path)
@@ -147,9 +148,10 @@ public class Generator: Generating {
             .merging(projects: graph.projectPaths)
             .adding(files: workspaceFiles)
 
-        return try workspaceGenerator.generate(workspace: updatedWorkspace,
-                                               path: path,
-                                               graph: graph,
-                                               tuistConfig: tuistConfig)
+        let workspacePath = try workspaceGenerator.generate(workspace: updatedWorkspace,
+                                                            path: path,
+                                                            graph: graph,
+                                                            tuistConfig: tuistConfig)
+        return (workspacePath, graph)
     }
 }

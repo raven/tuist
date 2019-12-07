@@ -1,10 +1,11 @@
 import Basic
+import TuistCore
 import TuistGenerator
 
 extension Generating {
     func generate(at path: AbsolutePath,
-                  manifestLoader: ManifestLoading,
-                  projectOnly: Bool) throws -> AbsolutePath {
+                  manifestLoader: GraphManifestLoading,
+                  projectOnly: Bool) throws -> (AbsolutePath, Graphing) {
         if projectOnly {
             return try generateProject(at: path)
         } else {
@@ -14,7 +15,7 @@ extension Generating {
     }
 
     func generateWorkspace(at path: AbsolutePath,
-                           manifestLoader: ManifestLoading) throws -> AbsolutePath {
+                           manifestLoader: GraphManifestLoading) throws -> (AbsolutePath, Graphing) {
         let manifests = manifestLoader.manifests(at: path)
         if manifests.contains(.workspace) {
             return try generateWorkspace(at: path, workspaceFiles: [])
