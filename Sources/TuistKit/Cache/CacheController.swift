@@ -22,17 +22,22 @@ final class CacheController: CacheControlling {
     /// Utility to build the xcframeworks.
     private let xcframeworkBuilder: XCFrameworkBuilding
 
+    /// Graph content hasher.
+    private let graphContentHasher: GraphContentHashing
+
     /// Cache.
     private let cache: CacheStoraging
 
     init(generator: Generating = Generator(),
          manifestLoader: GraphManifestLoading = GraphManifestLoader(),
-         xcframeworkBuilder: XCFrameworkBuilding = XCFrameworkBuilder(),
-         cache: CacheStoraging = Cache()) {
+         xcframeworkBuilder: XCFrameworkBuilding = XCFrameworkBuilder(printOutput: false),
+         cache: CacheStoraging = Cache(),
+         graphContentHasher: GraphContentHashing = GraphContentHasher()) {
         self.generator = generator
         self.manifestLoader = manifestLoader
         self.xcframeworkBuilder = xcframeworkBuilder
         self.cache = cache
+        self.graphContentHasher = graphContentHasher
     }
 
     func cache(path: AbsolutePath) throws {
@@ -40,10 +45,17 @@ final class CacheController: CacheControlling {
         let (path, graph) = try generator.generate(at: path, manifestLoader: manifestLoader, projectOnly: false)
 
         // Getting the hash
+        Printer.shared.print(section: "Hashing cacheable frameworks")
+        let targets: [TargetNode: String] = (try graphContentHasher.contentHashes(for: graph))
+            .filter { target, hash in
+                if let exists = try? self.cache.exists(hash: hash).toBlocking().first(), exists {
+                    Printer.shared.print("The target \(.bold(.raw(target.name))) with hash \(.bold(.raw(hash))) is already in the cache. Skipping...")
+                    return false
+                }
+                return true
+            }
 
-        let targets: [TargetNode: String] = [:]
         var completables: [Completable] = []
-
         try targets.forEach { target, hash in
             // Build targets sequentially
             let xcframeworkPath: AbsolutePath!
