@@ -46,9 +46,9 @@ final class CacheController: CacheControlling {
 
         // Getting the hash
         Printer.shared.print(section: "Hashing cacheable frameworks")
-        let targets: [TargetNode: String] = (try graphContentHasher.contentHashes(for: graph))
+        let targets: [TargetNode: String] = try graphContentHasher.contentHashes(for: graph)
             .filter { target, hash in
-                if let exists = try? self.cache.exists(hash: hash).toBlocking().first(), exists {
+                if let exists = try self.cache.exists(hash: hash).toBlocking().first(), exists {
                     Printer.shared.print("The target \(.bold(.raw(target.name))) with hash \(.bold(.raw(hash))) is already in the cache. Skipping...")
                     return false
                 }
