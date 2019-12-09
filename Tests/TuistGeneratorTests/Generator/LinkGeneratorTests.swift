@@ -99,19 +99,11 @@ final class LinkGeneratorErrorTests: XCTestCase {
 
         let group = PBXGroup()
         pbxproj.add(object: group)
-    
-        let from = AbsolutePath("/Frameworks/")
-        let fileAbsolutePath = AbsolutePath("/Frameworks/Test.xcframework")
-        let fileRelativePath = RelativePath("./Test.xcframework")
-        let fileElements = ProjectFileElements()
-        fileElements.addFileElement(from: from,
-                                          fileAbsolutePath: fileAbsolutePath,
-                                          fileRelativePath: fileRelativePath,
-                                          name: nil,
-                                          toGroup: group,
-                                          pbxproj: pbxproj)
 
-        let wakaFile = fileElements.file(path: fileAbsolutePath)
+        let fileAbsolutePath = AbsolutePath("/Frameworks/Test.xcframework")
+
+        let fileElements = createFileElements(fileAbsolutePath: fileAbsolutePath,
+                                              pbxproj: pbxproj)
 
         // When
         try subject.generateEmbedPhase(dependencies: dependencies,
@@ -121,12 +113,13 @@ final class LinkGeneratorErrorTests: XCTestCase {
                                        sourceRootPath: sourceRootPath)
 
         // Then
-        let copyBuildPhase: PBXCopyFilesBuildPhase? = pbxTarget.buildPhases.last as? PBXCopyFilesBuildPhase
-        XCTAssertEqual(copyBuildPhase?.name, "Embed Frameworks")
-        let wakaBuildFile: PBXBuildFile? = copyBuildPhase?.files?.last
-        XCTAssertEqual(wakaBuildFile?.file, wakaFile)
-        let settings: [String: [String]]? = wakaBuildFile?.settings as? [String: [String]]
-        XCTAssertEqual(settings, ["ATTRIBUTES": ["CodeSignOnCopy"]])
+        let copyBuildPhase = try XCTUnwrap(pbxTarget.embedFrameworksBuildPhases().first)
+        XCTAssertEqual(copyBuildPhase.name, "Embed Frameworks")
+        let buildFiles = try XCTUnwrap(copyBuildPhase.files)
+        XCTAssertEqual(buildFiles.map { $0.file?.path }, [ "Test.xcframework"])
+        XCTAssertEqual(buildFiles.map { $0.settings as? [String: [String]] }, [
+            ["ATTRIBUTES": ["CodeSignOnCopy"]]
+        ])
     }
 
     func test_setupFrameworkSearchPath() throws {
@@ -521,5 +514,20 @@ final class LinkGeneratorErrorTests: XCTestCase {
         }
 
         return projectFileElements
+    }
+    
+    private func createFileElements(fileAbsolutePath: AbsolutePath,
+                            pbxproj: PBXProj) -> ProjectFileElements {
+        let fileElements = ProjectFileElements()
+        let from = AbsolutePath("/Frameworks/")
+        let fileRelativePath = RelativePath("./Test.xcframework")
+
+        fileElements.addFileElement(from: from,
+                                    fileAbsolutePath: fileAbsolutePath,
+                                    fileRelativePath: fileRelativePath,
+                                    name: nil,
+                                    toGroup: pbxproj.groups.first!,
+                                    pbxproj: pbxproj)
+        return fileElements
     }
 }
