@@ -320,7 +320,7 @@ extension TuistCore.Settings {
                 result[variant] = try TuistCore.Configuration.from(manifest: val.configuration, path: path, generatorPaths: generatorPaths)
                 return result
             }
-        let defaultSettings = TuistCore.DefaultSettings.from(manifest: manifest.defaultSettings)
+        let defaultSettings = try TuistCore.DefaultSettings(manifest: manifest.defaultSettings, generatorPaths: generatorPaths)
         return TuistCore.Settings(base: base,
                                   configurations: configurations,
                                   defaultSettings: defaultSettings)
@@ -334,19 +334,6 @@ extension TuistCore.Settings {
             try TuistCore.Configuration.from(manifest: $0, path: path, generatorPaths: generatorPaths)
         }
         return (buildConfiguration, configuration)
-    }
-}
-
-extension TuistCore.DefaultSettings {
-    static func from(manifest: ProjectDescription.DefaultSettings) -> TuistCore.DefaultSettings {
-        switch manifest {
-        case .recommended:
-            return .recommended
-        case .essential:
-            return .essential
-        case .none:
-            return .none
-        }
     }
 }
 
