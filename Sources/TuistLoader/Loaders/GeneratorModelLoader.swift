@@ -250,7 +250,7 @@ extension TuistCore.Target {
                      path: AbsolutePath,
                      generatorPaths: GeneratorPaths) throws -> TuistCore.Target {
         let name = manifest.name
-        let platform = try TuistCore.Platform.from(manifest: manifest.platform)
+        let platform = try TuistCore.Platform(manifest: manifest.platform, generatorPaths: generatorPaths)
         let product = TuistCore.Product.from(manifest: manifest.product)
 
         let bundleId = manifest.bundleId
@@ -572,21 +572,6 @@ extension TuistCore.Product {
             return .watch2App
         case .watch2Extension:
             return .watch2Extension
-        }
-    }
-}
-
-extension TuistCore.Platform {
-    static func from(manifest: ProjectDescription.Platform) throws -> TuistCore.Platform {
-        switch manifest {
-        case .macOS:
-            return .macOS
-        case .iOS:
-            return .iOS
-        case .tvOS:
-            return .tvOS
-        case .watchOS:
-            return .watchOS
         }
     }
 }
